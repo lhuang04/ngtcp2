@@ -25,17 +25,17 @@ AM_CPPFLAGS = -I$(top_srcdir)/lib/includes -I$(top_builddir)/lib/includes \
 	-I$(top_srcdir)/lib -DBUILDING_NGTCP2 \
 	-I$(top_srcdir)/crypto/includes -I$(top_builddir)/crypto/includes \
 	-I$(top_srcdir)/crypto -I$(top_builddir)/crypto \
-	@OPENSSL_CFLAGS@
+  @OPENSSL_CFLAGS@
 AM_LDFLAGS = ${LIBTOOL_LDFLAGS}
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libngtcp2_crypto_openssl.pc
+pkgconfig_DATA = libngtcp2_crypto_mbedtls.pc
 DISTCLEANFILES = $(pkgconfig_DATA)
 
-lib_LTLIBRARIES = libngtcp2_crypto_openssl.la
+lib_LTLIBRARIES = libngtcp2_crypto_mbedtls.la
 
-libngtcp2_crypto_openssl_la_SOURCES = openssl.c ../shared.c ../shared.h
-libngtcp2_crypto_openssl_la_LDFLAGS = -no-undefined \
-	-version-info $(CRYPTO_OPENSSL_LT_CURRENT):$(CRYPTO_OPENSSL_LT_REVISION):$(CRYPTO_OPENSSL_LT_AGE) \
-	@OPENSSL_LIBS@
-libngtcp2_crypto_openssl_la_LIBADD = $(top_builddir)/lib/libngtcp2.la
+libngtcp2_crypto_mbedtls_la_SOURCES = mbedtls.c ../shared.c ../shared.h
+libngtcp2_crypto_mbedtls_la_LDFLAGS = -no-undefined \
+	-version-info $(CRYPTO_MBEDTLS_LT_CURRENT):$(CRYPTO_MBEDTLS_LT_REVISION):$(CRYPTO_MBEDTLS_LT_AGE) \
+  @OPENSSL_LIBS@
+libngtcp2_crypto_mbedtls_la_LIBADD = $(top_builddir)/lib/libngtcp2.la

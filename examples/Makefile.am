@@ -154,6 +154,20 @@ bsslserver_SOURCES = server.cc server.h ${SERVER_SRCS} \
 	util_openssl.cc util_aead_boringssl.cc
 endif # ENABLE_EXAMPLE_BORINGSSL
 
+if ENABLE_EXAMPLE_MBEDTLS
+noinst_PROGRAMS += mbedtlsclient
+
+mbedtlsclient_CPPFLAGS = ${AM_CPPFLAGS} @OPENSSL_CFLAGS@ -DWITH_EXAMPLE_MBEDTLS
+mbedtlsclient_LDADD = ${LDADD} \
+	$(top_builddir)/crypto/mbedtls/libngtcp2_crypto_mbedtls.la \
+	@OPENSSL_LIBS@
+mbedtlsclient_SOURCES = client.cc client.h ${CLIENT_SRCS} \
+	tls_client_context_mbedtls.cc tls_client_context_mbedtls.h \
+	tls_client_session_mbedtls.cc tls_client_session_mbedtls.h \
+	tls_session_base_mbedtls.cc tls_session_base_mbedtls.h \
+	util_mbedtls.cc
+endif # ENABLE_EXAMPLE_BORINGSSL
+
 if HAVE_CUNIT
 check_PROGRAMS = examplestest
 examplestest_SOURCES = examplestest.cc \

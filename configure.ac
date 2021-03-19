@@ -57,6 +57,10 @@ AC_SUBST(CRYPTO_BORINGSSL_LT_CURRENT, 0)
 AC_SUBST(CRYPTO_BORINGSSL_LT_REVISION, 0)
 AC_SUBST(CRYPTO_BORINGSSL_LT_AGE, 0)
 
+AC_SUBST(CRYPTO_MBEDTLS_LT_CURRENT, 0)
+AC_SUBST(CRYPTO_MBEDTLS_LT_REVISION, 0)
+AC_SUBST(CRYPTO_MBEDTLS_LT_AGE, 0)
+
 # from nghttp2
 major=`echo $PACKAGE_VERSION |cut -d. -f1 | sed -e "s/[^0-9]//g"`
 minor=`echo $PACKAGE_VERSION |cut -d. -f2 | sed -e "s/[^0-9]//g"`
@@ -127,6 +131,11 @@ AC_ARG_WITH([boringssl],
     [AS_HELP_STRING([--with-boringssl],
                     [Use boringssl [default=no]])],
     [request_boringssl=$withval], [request_boringssl=no])
+
+AC_ARG_WITH([mbedtls],
+    [AS_HELP_STRING([--with-mbedtls],
+                    [Use mbedtls [default=no]])],
+    [request_mbedtls=$withval], [request_mbedtls=no])
 
 AC_ARG_VAR([BORINGSSL_CFLAGS], [C compiler flags for BORINGSSL])
 AC_ARG_VAR([BORINGSSL_LIBS], [linker flags for BORINGSSL])
@@ -290,6 +299,21 @@ fi
 
 AM_CONDITIONAL([HAVE_BORINGSSL], [ test "x${have_boringssl}" = "xyes" ])
 
+# mbedtls (required for libngtcp2_crypto_mbedtls)
+have_mbedtls=no
+if test "x${request_mbedtls}" != "xno"; then
+  have_mbedtls=yes
+  MBEDTLS_CFLAGS=
+  MBEDLTS_LIBS=
+fi
+
+if test "x${request_mbedtls}" = "xyes" &&
+   test "x${have_mbedtls}" != "xyes"; then
+  AC_MSG_ERROR([mbedtls was requested (--with-mbedtls) but not found])
+fi
+
+AM_CONDITIONAL([HAVE_MBEDTLS], [ test "x${have_mbedtls}" = "xyes" ])
+
 have_crypto=no
 if test "x${have_openssl}" = "xyes" ||
    test "x${have_gnutls}" = "xyes" ||
@@ -363,12 +387,18 @@ if test "x${lib_only}" = "xno" &&
     AC_DEFINE([ENABLE_EXAMPLE_BORINGSSL], [1],
               [Define to 1 in order to build examples/{bsslclient,bsslserver}])
   fi
+  
+  if test "x${have_mbedtls}" = "xyes"; then
+    AC_DEFINE([ENABLE_EXAMPLE_MBEDTLS], [1],
+              [Define to 1 in order to build examples/{mbedtlsclient}])
+  fi
 fi
 
 AM_CONDITIONAL([ENABLE_EXAMPLES], [ test "x${enable_examples}" = "xyes" ])
 AM_CONDITIONAL([ENABLE_EXAMPLE_OPENSSL], [ test "x${enable_examples}" = "xyes" && test "x${have_openssl}" = "xyes" ])
 AM_CONDITIONAL([ENABLE_EXAMPLE_GNUTLS], [ test "x${enable_examples}" = "xyes" && test "x${have_gnutls}" = "xyes" ])
 AM_CONDITIONAL([ENABLE_EXAMPLE_BORINGSSL], [ test "x${enable_examples}" = "xyes" && test "x${have_boringssl}" = "xyes" ])
+AM_CONDITIONAL([ENABLE_EXAMPLE_MBEDTLS], [ test "x${enable_examples}" = "xyes" && test "x${have_mbedtls}" = "xyes" ])
 
 # jemalloc
 have_jemalloc=no
@@ -572,6 +602,8 @@ AC_CONFIG_FILES([
   crypto/gnutls/libngtcp2_crypto_gnutls.pc
   crypto/boringssl/Makefile
   crypto/boringssl/libngtcp2_crypto_boringssl.pc
+  crypto/mbedtls/Makefile
+  crypto/mbedtls/libngtcp2_crypto_mbedtls.pc
   doc/Makefile
   doc/source/conf.py
   third-party/Makefile
@@ -609,6 +641,7 @@ AC_MSG_NOTICE([summary of build options:
       libngtcp2_crypto_openssl:   ${have_openssl}
       libngtcp2_crypto_gnutls:    ${have_gnutls}
       libngtcp2_crypto_boringssl: ${have_boringssl}
+      libngtcp2_crypto_mbedtls:   ${have_mbedtls}
     Test:
       CUnit:          ${have_cunit} (CFLAGS='${CUNIT_CFLAGS}' LIBS='${CUNIT_LIBS}')
     Debug:
@@ -620,5 +653,6 @@ AC_MSG_NOTICE([summary of build options:
       Jemalloc:       ${have_jemalloc} (CFLAGS='${JEMALLOC_CFLAGS}' LIBS='${JEMALLOC_LIBS}')
       GnuTLS:         ${have_gnutls} (CFLAGS='${GNUTLS_CFLAGS}' LIBS='${GNUTLS_LIBS}')
       BoringSSL:      ${have_boringssl} (CFLAGS='${BORINGSSL_CFLAGS}' LIBS='${BORINGSSL_LIBS}')
+      mbedtls:        ${have_mbedtls} (CFLAGS='${MBEDTLS_CFLAGS}' LIBS='${MBEDTLS_LIBS}')
     Examples:         ${enable_examples}
 ])

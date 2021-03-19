@@ -37,3 +37,7 @@ endif
 if HAVE_BORINGSSL
 SUBDIRS += boringssl
 endif
+
+if HAVE_MBEDTLS
+SUBDIRS += mbedtls
+endif
