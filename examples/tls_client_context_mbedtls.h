@@ -30,6 +30,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <openssl/ssl.h>
+#include <mbedtls/ssl.h>
 
 class TLSClientContext {
 public:

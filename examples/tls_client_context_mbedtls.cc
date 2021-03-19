@@ -125,6 +125,10 @@ auto quic_method = SSL_QUIC_METHOD{
 
 int TLSClientContext::init(const char *private_key_file,
                            const char *cert_file) {
+  mbedtls_ssl_config mbed_config;
+  mbedtls_ssl_config_init(&mbed_config);
+  mbedtls_ssl_config_free(&mbed_config);
+
   ssl_ctx_ = SSL_CTX_new(TLS_client_method());
 
   SSL_CTX_set_min_proto_version(ssl_ctx_, TLS1_3_VERSION);
