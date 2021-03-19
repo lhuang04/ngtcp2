@@ -22,27 +22,28 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef TLS_CLIENT_CONTEXT_H
-#define TLS_CLIENT_CONTEXT_H
+#ifndef TLS_CLIENT_CONTEXT_MBEDTLS_H
+#define TLS_CLIENT_CONTEXT_MBEDTLS_H
 
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
 #endif // HAVE_CONFIG_H
 
-#if defined(ENABLE_EXAMPLE_OPENSSL) && defined(WITH_EXAMPLE_OPENSSL)
-#  include "tls_client_context_openssl.h"
-#endif // ENABLE_EXAMPLE_OPENSSL && WITH_EXAMPLE_OPENSSL
+#include <openssl/ssl.h>
 
-#if defined(ENABLE_EXAMPLE_GNUTLS) && defined(WITH_EXAMPLE_GNUTLS)
-#  include "tls_client_context_gnutls.h"
-#endif // ENABLE_EXAMPLE_GNUTLS && WITH_EXAMPLE_GNUTLS
+class TLSClientContext {
+public:
+  TLSClientContext();
+  ~TLSClientContext();
 
-#if defined(ENABLE_EXAMPLE_BORINGSSL) && defined(WITH_EXAMPLE_BORINGSSL)
-#  include "tls_client_context_boringssl.h"
-#endif // ENABLE_EXAMPLE_BORINGSSL && WITH_EXAMPLE_BORINGSSL
+  int init(const char *private_key_file, const char *cert_file);
 
-#if defined(ENABLE_EXAMPLE_MBEDTLS) && defined(WITH_EXAMPLE_MBEDTLS)
-#  include "tls_client_context_mbedtls.h"
-#endif // ENABLE_EXAMPLE_MBEDTLS && WITH_EXAMPLE_MBEDTLS
+  SSL_CTX *get_native_handle() const;
 
-#endif // TLS_CLIENT_CONTEXT_OPENSSL_H
+  void enable_keylog();
+
+private:
+  SSL_CTX *ssl_ctx_;
+};
+
+#endif // TLS_CLIENT_CONTEXT_MBEDTLS_H

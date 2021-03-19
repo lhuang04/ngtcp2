@@ -22,27 +22,31 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef TLS_CLIENT_CONTEXT_H
-#define TLS_CLIENT_CONTEXT_H
+#ifndef TLS_SESSION_BASE_MBEDTLS_H
+#define TLS_SESSION_BASE_MBEDTLS_H
 
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
 #endif // HAVE_CONFIG_H
 
-#if defined(ENABLE_EXAMPLE_OPENSSL) && defined(WITH_EXAMPLE_OPENSSL)
-#  include "tls_client_context_openssl.h"
-#endif // ENABLE_EXAMPLE_OPENSSL && WITH_EXAMPLE_OPENSSL
+#include <string>
 
-#if defined(ENABLE_EXAMPLE_GNUTLS) && defined(WITH_EXAMPLE_GNUTLS)
-#  include "tls_client_context_gnutls.h"
-#endif // ENABLE_EXAMPLE_GNUTLS && WITH_EXAMPLE_GNUTLS
+#include <openssl/ssl.h>
 
-#if defined(ENABLE_EXAMPLE_BORINGSSL) && defined(WITH_EXAMPLE_BORINGSSL)
-#  include "tls_client_context_boringssl.h"
-#endif // ENABLE_EXAMPLE_BORINGSSL && WITH_EXAMPLE_BORINGSSL
+class TLSSessionBase {
+public:
+  TLSSessionBase();
+  ~TLSSessionBase();
 
-#if defined(ENABLE_EXAMPLE_MBEDTLS) && defined(WITH_EXAMPLE_MBEDTLS)
-#  include "tls_client_context_mbedtls.h"
-#endif // ENABLE_EXAMPLE_MBEDTLS && WITH_EXAMPLE_MBEDTLS
+  SSL *get_native_handle() const;
 
-#endif // TLS_CLIENT_CONTEXT_OPENSSL_H
+  std::string get_cipher_name() const;
+  std::string get_selected_alpn() const;
+  // Keylog is enabled per SSL_CTX.
+  void enable_keylog() {}
+
+protected:
+  SSL *ssl_;
+};
+
+#endif // TLS_SESSION_BASE_MBEDTLS_H

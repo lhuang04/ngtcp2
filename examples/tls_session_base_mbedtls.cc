@@ -22,27 +22,33 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef TLS_CLIENT_CONTEXT_H
-#define TLS_CLIENT_CONTEXT_H
+#include "tls_session_base_mbedtls.h"
 
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif // HAVE_CONFIG_H
+#include <array>
 
-#if defined(ENABLE_EXAMPLE_OPENSSL) && defined(WITH_EXAMPLE_OPENSSL)
-#  include "tls_client_context_openssl.h"
-#endif // ENABLE_EXAMPLE_OPENSSL && WITH_EXAMPLE_OPENSSL
+#include "util.h"
 
-#if defined(ENABLE_EXAMPLE_GNUTLS) && defined(WITH_EXAMPLE_GNUTLS)
-#  include "tls_client_context_gnutls.h"
-#endif // ENABLE_EXAMPLE_GNUTLS && WITH_EXAMPLE_GNUTLS
+using namespace ngtcp2;
 
-#if defined(ENABLE_EXAMPLE_BORINGSSL) && defined(WITH_EXAMPLE_BORINGSSL)
-#  include "tls_client_context_boringssl.h"
-#endif // ENABLE_EXAMPLE_BORINGSSL && WITH_EXAMPLE_BORINGSSL
+TLSSessionBase::TLSSessionBase() : ssl_{nullptr} {}
 
-#if defined(ENABLE_EXAMPLE_MBEDTLS) && defined(WITH_EXAMPLE_MBEDTLS)
-#  include "tls_client_context_mbedtls.h"
-#endif // ENABLE_EXAMPLE_MBEDTLS && WITH_EXAMPLE_MBEDTLS
+TLSSessionBase::~TLSSessionBase() {
+  if (ssl_) {
+    SSL_free(ssl_);
+  }
+}
 
-#endif // TLS_CLIENT_CONTEXT_OPENSSL_H
+SSL *TLSSessionBase::get_native_handle() const { return ssl_; }
+
+std::string TLSSessionBase::get_cipher_name() const {
+  return SSL_get_cipher_name(ssl_);
+}
+
+std::string TLSSessionBase::get_selected_alpn() const {
+  const unsigned char *alpn = nullptr;
+  unsigned int alpnlen;
+
+  SSL_get0_alpn_selected(ssl_, &alpn, &alpnlen);
+
+  return std::string{alpn, alpn + alpnlen};
+}

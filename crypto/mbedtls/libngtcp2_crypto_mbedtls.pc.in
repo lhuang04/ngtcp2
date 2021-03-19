@@ -1,6 +1,6 @@
 # ngtcp2
 
-# Copyright (c) 2019 ngtcp2
+# Copyright (c) 2019 ngtcp2 contributors
 
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -20,30 +20,14 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
 
-if(HAVE_CRYPTO)
-  add_subdirectory(includes)
-endif()
-
-if(HAVE_OPENSSL)
-  add_subdirectory(openssl)
-elseif(ENABLE_OPENSSL)
-  message(WARNING "libngtcp2_crypto_openssl library is disabled due to lack of good OpenSSL")
-endif()
-
-if(HAVE_GNUTLS)
-  add_subdirectory(gnutls)
-elseif(ENABLE_GNUTLS)
-  message(WARNING "libngtcp2_crypto_gnutls library is disabled due to lack of good GnuTLS")
-endif()
-
-if(HAVE_BORINGSSL)
-  add_subdirectory(boringssl)
-elseif(ENABLE_BORINGSSL)
-  message(WARNING "libngtcp2_crypto_boringssl library is disabled due to lack of good BoringSSL")
-
-if(HAVE_MBEDTLS)
-  add_subdirectory(mbedtls)
-elseif(ENABLE_MBEDTLS)
-  message(WARNING "libngtcp2_crypto_mbedtls library is disabled due to lack of good mbedtls")
-endif()
+Name: libngtcp2_crypto_mbedtls
+Description: ngtcp2 mbedtls crypto library
+URL: https://github.com/ngtcp2/ngtcp2
+Version: @VERSION@
+Libs: -L${libdir} -lngtcp2_crypto_mbedtls
+Cflags: -I${includedir}

@@ -41,4 +41,8 @@
 #  include "tls_client_session_boringssl.h"
 #endif // ENABLE_EXAMPLE_BORINGSSL && WITH_EXAMPLE_BORINGSSL
 
+#if defined(ENABLE_EXAMPLE_MBEDTLS) && defined(WITH_EXAMPLE_MBEDTLS)
+#  include "tls_client_session_mbedtls.h"
+#endif // ENABLE_EXAMPLE_MBEDTLS && WITH_EXAMPLE_MBEDTLS
+
 #endif // TLS_CLIENT_SESSION_H

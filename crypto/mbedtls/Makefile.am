@@ -1,6 +1,6 @@
 # ngtcp2
 
-# Copyright (c) 2019 ngtcp2
+# Copyright (c) 2019 ngtcp2 contributors
 
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -20,30 +20,22 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+AM_CFLAGS = $(WARNCFLAGS) $(DEBUGCFLAGS) $(EXTRACFLAG)
+AM_CPPFLAGS = -I$(top_srcdir)/lib/includes -I$(top_builddir)/lib/includes \
+	-I$(top_srcdir)/lib -DBUILDING_NGTCP2 \
+	-I$(top_srcdir)/crypto/includes -I$(top_builddir)/crypto/includes \
+	-I$(top_srcdir)/crypto -I$(top_builddir)/crypto \
+	@OPENSSL_CFLAGS@
+AM_LDFLAGS = ${LIBTOOL_LDFLAGS}
 
-if(HAVE_CRYPTO)
-  add_subdirectory(includes)
-endif()
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libngtcp2_crypto_openssl.pc
+DISTCLEANFILES = $(pkgconfig_DATA)
 
-if(HAVE_OPENSSL)
-  add_subdirectory(openssl)
-elseif(ENABLE_OPENSSL)
-  message(WARNING "libngtcp2_crypto_openssl library is disabled due to lack of good OpenSSL")
-endif()
+lib_LTLIBRARIES = libngtcp2_crypto_openssl.la
 
-if(HAVE_GNUTLS)
-  add_subdirectory(gnutls)
-elseif(ENABLE_GNUTLS)
-  message(WARNING "libngtcp2_crypto_gnutls library is disabled due to lack of good GnuTLS")
-endif()
-
-if(HAVE_BORINGSSL)
-  add_subdirectory(boringssl)
-elseif(ENABLE_BORINGSSL)
-  message(WARNING "libngtcp2_crypto_boringssl library is disabled due to lack of good BoringSSL")
-
-if(HAVE_MBEDTLS)
-  add_subdirectory(mbedtls)
-elseif(ENABLE_MBEDTLS)
-  message(WARNING "libngtcp2_crypto_mbedtls library is disabled due to lack of good mbedtls")
-endif()
+libngtcp2_crypto_openssl_la_SOURCES = openssl.c ../shared.c ../shared.h
+libngtcp2_crypto_openssl_la_LDFLAGS = -no-undefined \
+	-version-info $(CRYPTO_OPENSSL_LT_CURRENT):$(CRYPTO_OPENSSL_LT_REVISION):$(CRYPTO_OPENSSL_LT_AGE) \
+	@OPENSSL_LIBS@
+libngtcp2_crypto_openssl_la_LIBADD = $(top_builddir)/lib/libngtcp2.la
