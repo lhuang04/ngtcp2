@@ -29,7 +29,6 @@
 #  include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <openssl/ssl.h>
 #include <mbedtls/ssl.h>
 
 class TLSClientContext {
@@ -39,12 +38,12 @@ public:
 
   int init(const char *private_key_file, const char *cert_file);
 
-  SSL_CTX *get_native_handle() const;
+  mbedtls_ssl_config *get_native_handle() const;
 
   void enable_keylog();
 
 private:
-  SSL_CTX *ssl_ctx_;
+  mbedtls_ssl_config *ssl_ctx_;
 };
 
 #endif // TLS_CLIENT_CONTEXT_MBEDTLS_H

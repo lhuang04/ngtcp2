@@ -29,7 +29,10 @@
 
 #include <ngtcp2/ngtcp2_crypto_mbedtls.h>
 
-#include <openssl/err.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/debug.h>
+#include <mbedtls/entropy.h>
 
 #include "client_base.h"
 #include "template.h"
@@ -40,149 +43,90 @@ TLSClientContext::TLSClientContext() : ssl_ctx_{nullptr} {}
 
 TLSClientContext::~TLSClientContext() {
   if (ssl_ctx_) {
-    SSL_CTX_free(ssl_ctx_);
+    mbedtls_ssl_config_free(ssl_ctx_);
   }
 }
 
-SSL_CTX *TLSClientContext::get_native_handle() const { return ssl_ctx_; }
+mbedtls_ssl_config *TLSClientContext::get_native_handle() const { return ssl_ctx_; }
 
 namespace {
-int new_session_cb(SSL *ssl, SSL_SESSION *session) {
-  if (SSL_SESSION_get_max_early_data(session) !=
-      std::numeric_limits<uint32_t>::max()) {
-    std::cerr << "max_early_data_size is not 0xffffffff" << std::endl;
-  }
-  auto f = BIO_new_file(config.session_file, "w");
-  if (f == nullptr) {
-    std::cerr << "Could not write TLS session in " << config.session_file
-              << std::endl;
-    return 0;
-  }
+mbedtls_ssl_config _mbedTlsConfig;
+mbedtls_ctr_drbg_context _mbedTlsCtrDrbg;
+mbedtls_entropy_context _mbedTlsEntropy;
 
-  PEM_write_bio_SSL_SESSION(f, session);
-  BIO_free(f);
-
-  return 0;
+void _HandshakeDebugPrint(
+    void* ctx,
+    int level,
+    const char* file,
+    int line,
+    const char* msg) {
+  fprintf(stderr, "mbedDBG[%d]: %s:%d %s", level, file, line, msg);
 }
-} // namespace
 
-namespace {
-int set_encryption_secrets(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
-                           const uint8_t *read_secret,
-                           const uint8_t *write_secret, size_t secret_len) {
-  auto c = static_cast<ClientBase *>(SSL_get_app_data(ssl));
-  auto level = ngtcp2_crypto_mbedtls_from_ossl_encryption_level(ossl_level);
+int kSSLPresetQUICCiphersuites[] = {TLS_AES_128_GCM_SHA256, 0};
 
-  if (read_secret) {
-    if (c->on_rx_key(level, read_secret, secret_len) != 0) {
-      return 0;
-    }
+mbedtls_ecp_group_id kSSLPresetQUICCurves[] = {
+    MBEDTLS_ECP_DP_SECP256R1,
+    MBEDTLS_ECP_DP_NONE};
 
-    if (level == NGTCP2_CRYPTO_LEVEL_APPLICATION &&
-        c->call_application_rx_key_cb() != 0) {
-      return 0;
-    }
-  }
+const char* alpns[] = {"h3-fb-05", "h3-29", 0};
 
-  if (c->on_tx_key(level, write_secret, secret_len) != 0) {
-    return 0;
-  }
+const unsigned char PSEUDORANDOM_TAG[] = "mobilenetwork";
+mbedtls_ssl_config *create_ssl_ctx(const char *private_key_file, const char *cert_file) {
+  mbedtls_ssl_config_init(&_mbedTlsConfig);
+  mbedtls_ssl_config_defaults(
+      &_mbedTlsConfig,
+      MBEDTLS_SSL_IS_CLIENT,
+      MBEDTLS_SSL_TRANSPORT_QUIC,
+      MBEDTLS_SSL_PRESET_DEFAULT);
+  mbedtls_ssl_conf_min_version(
+      &_mbedTlsConfig,
+      MBEDTLS_SSL_MAJOR_VERSION_3,
+      MBEDTLS_SSL_MINOR_VERSION_4);
+  mbedtls_ssl_conf_max_version(
+      &_mbedTlsConfig,
+      MBEDTLS_SSL_MAJOR_VERSION_3,
+      MBEDTLS_SSL_MINOR_VERSION_4);
+  mbedtls_ssl_conf_ciphersuites(
+      &_mbedTlsConfig, kSSLPresetQUICCiphersuites);
+  mbedtls_ssl_conf_key_share_curves(
+      &_mbedTlsConfig, kSSLPresetQUICCurves);
+  mbedtls_ssl_conf_curves(&_mbedTlsConfig, kSSLPresetQUICCurves);
+  // Initialize counter mode DRBG (NOTE: do we need DRBG for GCM mode)?
+  mbedtls_ctr_drbg_init(&_mbedTlsCtrDrbg);
+  // Initialize the entropy source for the DRBG.
+  mbedtls_entropy_init(&_mbedTlsEntropy);
+  // Initialize the pseudo random number generator.
+  mbedtls_ssl_conf_rng(
+      &_mbedTlsConfig, mbedtls_ctr_drbg_random, &_mbedTlsCtrDrbg);
 
-  return 1;
+  // Allow any key exchanges
+  mbedtls_ssl_conf_tls13_key_exchange(
+      &_mbedTlsConfig, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL);
+
+  // Seed the DRBG for the first time and setup entropy source
+  // for future reseeds.
+  assert(
+      mbedtls_ctr_drbg_seed(
+          &_mbedTlsCtrDrbg,
+          mbedtls_entropy_func,
+          &_mbedTlsEntropy,
+          PSEUDORANDOM_TAG,
+          sizeof(PSEUDORANDOM_TAG)) == 0);
+
+  mbedtls_ssl_conf_authmode(&_mbedTlsConfig, MBEDTLS_SSL_VERIFY_NONE);
+  mbedtls_debug_set_threshold(5);
+  mbedtls_ssl_conf_dbg(&_mbedTlsConfig, _HandshakeDebugPrint, NULL);
+  mbedtls_ssl_conf_alpn_protocols(&_mbedTlsConfig, alpns);
+  return &_mbedTlsConfig;
 }
-} // namespace
-
-namespace {
-int add_handshake_data(SSL *ssl, OSSL_ENCRYPTION_LEVEL ossl_level,
-                       const uint8_t *data, size_t len) {
-  auto c = static_cast<ClientBase *>(SSL_get_app_data(ssl));
-  auto level = ngtcp2_crypto_mbedtls_from_ossl_encryption_level(ossl_level);
-  c->write_client_handshake(level, data, len);
-  return 1;
-}
-} // namespace
-
-namespace {
-int flush_flight(SSL *ssl) { return 1; }
-} // namespace
-
-namespace {
-int send_alert(SSL *ssl, enum ssl_encryption_level_t level, uint8_t alert) {
-  auto c = static_cast<ClientBase *>(SSL_get_app_data(ssl));
-  c->set_tls_alert(alert);
-  return 1;
-}
-} // namespace
-
-namespace {
-auto quic_method = SSL_QUIC_METHOD{
-    set_encryption_secrets,
-    add_handshake_data,
-    flush_flight,
-    send_alert,
-};
 } // namespace
 
 int TLSClientContext::init(const char *private_key_file,
                            const char *cert_file) {
-  mbedtls_ssl_config mbed_config;
-  mbedtls_ssl_config_init(&mbed_config);
-  mbedtls_ssl_config_free(&mbed_config);
-
-  ssl_ctx_ = SSL_CTX_new(TLS_client_method());
-
-  SSL_CTX_set_min_proto_version(ssl_ctx_, TLS1_3_VERSION);
-  SSL_CTX_set_max_proto_version(ssl_ctx_, TLS1_3_VERSION);
-
-  SSL_CTX_set_default_verify_paths(ssl_ctx_);
-
-  if (SSL_CTX_set_ciphersuites(ssl_ctx_, config.ciphers) != 1) {
-    std::cerr << "SSL_CTX_set_ciphersuites: "
-              << ERR_error_string(ERR_get_error(), nullptr) << std::endl;
-    return -1;
-  }
-
-  if (SSL_CTX_set1_groups_list(ssl_ctx_, config.groups) != 1) {
-    std::cerr << "SSL_CTX_set1_groups_list failed" << std::endl;
-    return -1;
-  }
-
-  if (private_key_file && cert_file) {
-    if (SSL_CTX_use_PrivateKey_file(ssl_ctx_, private_key_file,
-                                    SSL_FILETYPE_PEM) != 1) {
-      std::cerr << "SSL_CTX_use_PrivateKey_file: "
-                << ERR_error_string(ERR_get_error(), nullptr) << std::endl;
-      return -1;
-    }
-
-    if (SSL_CTX_use_certificate_chain_file(ssl_ctx_, cert_file) != 1) {
-      std::cerr << "SSL_CTX_use_certificate_file: "
-                << ERR_error_string(ERR_get_error(), nullptr) << std::endl;
-      return -1;
-    }
-  }
-
-  SSL_CTX_set_quic_method(ssl_ctx_, &quic_method);
-
-  if (config.session_file) {
-    SSL_CTX_set_session_cache_mode(
-        ssl_ctx_, SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_NO_INTERNAL_STORE);
-    SSL_CTX_sess_set_new_cb(ssl_ctx_, new_session_cb);
-  }
-
-  return 0;
+  ssl_ctx_ = create_ssl_ctx(private_key_file, cert_file);
+  return ssl_ctx_ != NULL? 0 : -1;
 }
-
-extern std::ofstream keylog_file;
-
-namespace {
-void keylog_callback(const SSL *ssl, const char *line) {
-  keylog_file.write(line, strlen(line));
-  keylog_file.put('\n');
-  keylog_file.flush();
-}
-} // namespace
 
 void TLSClientContext::enable_keylog() {
-  SSL_CTX_set_keylog_callback(ssl_ctx_, keylog_callback);
 }

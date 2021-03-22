@@ -31,14 +31,14 @@
 
 #include <string>
 
-#include <openssl/ssl.h>
+#include <mbedtls/ssl.h>
 
 class TLSSessionBase {
 public:
   TLSSessionBase();
   ~TLSSessionBase();
 
-  SSL *get_native_handle() const;
+  mbedtls_ssl_context *get_native_handle() const;
 
   std::string get_cipher_name() const;
   std::string get_selected_alpn() const;
@@ -46,7 +46,7 @@ public:
   void enable_keylog() {}
 
 protected:
-  SSL *ssl_;
+  mbedtls_ssl_context *ssl_;
 };
 
 #endif // TLS_SESSION_BASE_MBEDTLS_H

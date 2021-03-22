@@ -34,21 +34,16 @@ TLSSessionBase::TLSSessionBase() : ssl_{nullptr} {}
 
 TLSSessionBase::~TLSSessionBase() {
   if (ssl_) {
-    SSL_free(ssl_);
+    mbedtls_ssl_free(ssl_);
   }
 }
 
-SSL *TLSSessionBase::get_native_handle() const { return ssl_; }
+mbedtls_ssl_context *TLSSessionBase::get_native_handle() const { return ssl_; }
 
 std::string TLSSessionBase::get_cipher_name() const {
-  return SSL_get_cipher_name(ssl_);
+  return "";
 }
 
 std::string TLSSessionBase::get_selected_alpn() const {
-  const unsigned char *alpn = nullptr;
-  unsigned int alpnlen;
-
-  SSL_get0_alpn_selected(ssl_, &alpn, &alpnlen);
-
-  return std::string{alpn, alpn + alpnlen};
+  return "";
 }
