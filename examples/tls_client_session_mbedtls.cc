@@ -27,6 +27,8 @@
 #include <cassert>
 #include <iostream>
 
+#include <ngtcp2/ngtcp2_crypto_mbedtls.h>
+
 #include "tls_client_context_mbedtls.h"
 #include "client_base.h"
 #include "template.h"
@@ -38,69 +40,88 @@ TLSClientSession::~TLSClientSession() {}
 
 extern Config config;
 
+namespace {
+int set_encryption_secrets(void* ctx, mbedtls_ssl_crypto_level l,
+                           const uint8_t *read_secret,
+                           const uint8_t *write_secret, size_t secret_len) {
+  ClientBase* c = (ClientBase*) ctx;
+  auto level = ngtcp2_crypto_mbedtls_from_ossl_encryption_level(l);
+
+  if (read_secret) {
+    if (c->on_rx_key(level, read_secret, secret_len) != 0) {
+      return -1;
+    }
+
+    if (level == NGTCP2_CRYPTO_LEVEL_APPLICATION &&
+        c->call_application_rx_key_cb() != 0) {
+      return -1;
+    }
+  }
+
+  if (c->on_tx_key(level, write_secret, secret_len) != 0) {
+    return -1;
+  }
+
+  return 0;
+}
+} // namespace
+
+namespace {
+int add_handshake_data(void* ctx, mbedtls_ssl_crypto_level l,
+                       const uint8_t *data, size_t len) {
+  ClientBase* c = (ClientBase*) ctx;
+  auto level = ngtcp2_crypto_mbedtls_from_ossl_encryption_level(l);
+  c->write_client_handshake(level, data, len);
+  return 0;
+}
+} // namespace
+
+namespace {
+void process_new_session(void* callbackParam, mbedtls_ssl_session* ticket)
+{
+}
+} // namespace
+
+namespace {
+int send_alert(void* ctx, mbedtls_ssl_crypto_level level, uint8_t alert) {
+  ClientBase* c = (ClientBase*) ctx;
+  c->set_tls_alert(alert);
+  return 0;
+}
+} // namespace
+
+namespace {
+auto quic_method = mbedtls_quic_method{
+    set_encryption_secrets,
+    add_handshake_data,
+    send_alert,
+    process_new_session,
+};
+
+mbedtls_ssl_context _ssl;
+} // namespace
+
 int TLSClientSession::init(bool &early_data_enabled,
                            const TLSClientContext &tls_ctx,
                            const char *remote_addr, ClientBase *client,
                            AppProtocol app_proto) {
   early_data_enabled = false;
-
   auto ssl_ctx = tls_ctx.get_native_handle();
 
-  ssl_ = SSL_new(ssl_ctx);
-  SSL_set_app_data(ssl_, client);
-  SSL_set_connect_state(ssl_);
-
-  switch (app_proto) {
-  case AppProtocol::H3: {
-    auto alpn = reinterpret_cast<const uint8_t *>(H3_ALPN);
-    auto alpnlen = str_size(H3_ALPN);
-    SSL_set_alpn_protos(ssl_, alpn, alpnlen);
-    break;
-  }
-  case AppProtocol::HQ: {
-    auto alpn = reinterpret_cast<const uint8_t *>(HQ_ALPN);
-    auto alpnlen = str_size(HQ_ALPN);
-    SSL_set_alpn_protos(ssl_, alpn, alpnlen);
-    break;
-  }
-  case AppProtocol::Perf:
-    /* TODO Not implemented yet */
-    assert(0);
-    break;
-  }
+  ssl_ = &_ssl;
+  mbedtls_ssl_init(ssl_);
+  mbedtls_ssl_setup(ssl_, ssl_ctx);
+  mbedtls_ssl_set_hs_quic_method(
+      ssl_, client, &quic_method);
 
   if (!config.sni.empty()) {
-    SSL_set_tlsext_host_name(ssl_, config.sni.data());
+    mbedtls_ssl_set_hostname(ssl_, config.sni.data());
   } else if (util::numeric_host(remote_addr)) {
     // If remote host is numeric address, just send "localhost" as SNI
     // for now.
-    SSL_set_tlsext_host_name(ssl_, "localhost");
+    mbedtls_ssl_set_hostname(ssl_, "localhost");
   } else {
-    SSL_set_tlsext_host_name(ssl_, remote_addr);
-  }
-
-  if (config.session_file) {
-    auto f = BIO_new_file(config.session_file, "r");
-    if (f == nullptr) {
-      std::cerr << "Could not read TLS session file " << config.session_file
-                << std::endl;
-    } else {
-      auto session = PEM_read_bio_SSL_SESSION(f, nullptr, 0, nullptr);
-      BIO_free(f);
-      if (session == nullptr) {
-        std::cerr << "Could not read TLS session file " << config.session_file
-                  << std::endl;
-      } else {
-        if (!SSL_set_session(ssl_, session)) {
-          std::cerr << "Could not set session" << std::endl;
-        } else if (!config.disable_early_data &&
-                   SSL_SESSION_get_max_early_data(session)) {
-          early_data_enabled = true;
-          SSL_set_quic_early_data_enabled(ssl_, 1);
-        }
-        SSL_SESSION_free(session);
-      }
-    }
+    mbedtls_ssl_set_hostname(ssl_, remote_addr);
   }
 
   return 0;
@@ -108,5 +129,5 @@ int TLSClientSession::init(bool &early_data_enabled,
 
 bool TLSClientSession::get_early_data_accepted() const {
   // SSL_get_early_data_status works after handshake completes.
-  return SSL_get_early_data_status(ssl_) == SSL_EARLY_DATA_ACCEPTED;
+  return mbedtls_ssl_get_early_data_status(ssl_) == MBEDTLS_SSL_EARLY_DATA_ACCEPTED;
 }

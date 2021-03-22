@@ -27,39 +27,11 @@
 
 #include <ngtcp2/ngtcp2.h>
 
-#include <openssl/ssl.h>
+#include <mbedtls/ssl.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @macrosection
- *
- * mbedtls specific error codes
- */
-
-/**
- * @macro
- *
- * :macro:`NGTCP2_CRYPTO_MBEDTLS_ERR_TLS_WANT_X509_LOOKUP` is the
- * error code which indicates that TLS handshake routine is
- * interrupted by X509 certificate lookup.  See
- * :macro:`SSL_ERROR_WANT_X509_LOOKUP` error description from
- * `SSL_do_handshake`.
- */
-#define NGTCP2_CRYPTO_OPENSSL_ERR_TLS_WANT_X509_LOOKUP -10001
-
-/**
- * @macro
- *
- * :macro:`NGTCP2_CRYPTO_MBEDTLS_ERR_TLS_WANT_CLIENT_HELLO_CB` is the
- * error code which indicates that TLS handshake routine is
- * interrupted by client hello callback.  See
- * :macro:`SSL_ERROR_WANT_CLIENT_HELLO_CB` error description from
- * `SSL_do_handshake`.
- */
-#define NGTCP2_CRYPTO_OPENSSL_ERR_TLS_WANT_CLIENT_HELLO_CB -10002
 
 /**
  * @function
@@ -70,16 +42,16 @@ extern "C" {
  */
 NGTCP2_EXTERN ngtcp2_crypto_level
 ngtcp2_crypto_mbedtls_from_ossl_encryption_level(
-    OSSL_ENCRYPTION_LEVEL ossl_level);
+    mbedtls_ssl_crypto_level mbed_crypto_level);
 
 /**
  * @function
  *
  * `ngtcp2_crypto_mbedtls_from_ngtcp2_crypto_level` translates
- * |crypto_level| to OSSL_ENCRYPTION_LEVEL.  This function is only
+ * |crypto_level| to mbedtls_ssl_crypto_level.  This function is only
  * available for mbedtls backend.
  */
-NGTCP2_EXTERN OSSL_ENCRYPTION_LEVEL
+NGTCP2_EXTERN mbedtls_ssl_crypto_level
 ngtcp2_crypto_mbedtls_from_ngtcp2_crypto_level(
     ngtcp2_crypto_level crypto_level);
 

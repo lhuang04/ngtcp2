@@ -30,9 +30,7 @@
 
 #include <ngtcp2/ngtcp2_crypto.h>
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/evp.h>
+#include <mbedtls/ssl.h>
 
 #include "template.h"
 
@@ -45,86 +43,37 @@ auto randgen = make_mt19937();
 } // namespace
 
 int generate_secret(uint8_t *secret, size_t secretlen) {
-  std::array<uint8_t, 16> rand;
   std::array<uint8_t, 32> md;
-
   assert(md.size() == secretlen);
 
   auto dis = std::uniform_int_distribution<uint8_t>(0, 255);
-  std::generate_n(rand.data(), rand.size(), [&dis]() { return dis(randgen); });
-
-  auto ctx = EVP_MD_CTX_new();
-  if (ctx == nullptr) {
-    return -1;
-  }
-
-  auto ctx_deleter = defer(EVP_MD_CTX_free, ctx);
-
-  unsigned int mdlen = md.size();
-  if (!EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) ||
-      !EVP_DigestUpdate(ctx, rand.data(), rand.size()) ||
-      !EVP_DigestFinal_ex(ctx, md.data(), &mdlen)) {
-    return -1;
-  }
+  std::generate_n(md.data(), md.size(), [&dis]() { return dis(randgen); });
 
   std::copy_n(std::begin(md), secretlen, secret);
   return 0;
 }
 
 std::optional<std::string> read_token(const std::string_view &filename) {
-  auto f = BIO_new_file(filename.data(), "r");
-  if (f == nullptr) {
-    std::cerr << "Could not open token file " << filename << std::endl;
-    return {};
-  }
-
-  auto f_d = defer(BIO_free, f);
-
-  char *name, *header;
-  unsigned char *data;
-  long datalen;
-  std::string token;
-  if (PEM_read_bio(f, &name, &header, &data, &datalen) != 1) {
-    std::cerr << "Could not read token file " << filename << std::endl;
-    return {};
-  }
-
-  OPENSSL_free(name);
-  OPENSSL_free(header);
-
-  auto res = std::string{data, data + datalen};
-
-  OPENSSL_free(data);
-
+  auto res = "";
   return res;
 }
 
 int write_token(const std::string_view &filename, const uint8_t *token,
                 size_t tokenlen) {
-  auto f = BIO_new_file(filename.data(), "w");
-  if (f == nullptr) {
-    std::cerr << "Could not write token in " << filename << std::endl;
-    return -1;
-  }
-
-  PEM_write_bio(f, "QUIC TOKEN", "", token, tokenlen);
-  BIO_free(f);
-
   return 0;
 }
 
 ngtcp2_crypto_md crypto_md_sha256() {
   ngtcp2_crypto_md md;
-  ngtcp2_crypto_md_init(&md, const_cast<EVP_MD *>(EVP_sha256()));
+  ngtcp2_crypto_md_init(&md, NULL);
   return md;
 }
 
 const char *crypto_default_ciphers() {
-  return "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_"
-         "SHA256:TLS_AES_128_CCM_SHA256";
+  return "TLS_AES_128_GCM_SHA256";
 }
 
-const char *crypto_default_groups() { return "X25519:P-256:P-384:P-521"; }
+const char *crypto_default_groups() { return "X25519"; }
 
 } // namespace util
 
