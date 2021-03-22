@@ -24,8 +24,7 @@ AM_CFLAGS = $(WARNCFLAGS) $(DEBUGCFLAGS) $(EXTRACFLAG)
 AM_CPPFLAGS = -I$(top_srcdir)/lib/includes -I$(top_builddir)/lib/includes \
 	-I$(top_srcdir)/lib -DBUILDING_NGTCP2 \
 	-I$(top_srcdir)/crypto/includes -I$(top_builddir)/crypto/includes \
-	-I$(top_srcdir)/crypto -I$(top_builddir)/crypto \
-  @OPENSSL_CFLAGS@
+	-I$(top_srcdir)/crypto -I$(top_builddir)/crypto
 AM_LDFLAGS = ${LIBTOOL_LDFLAGS}
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -36,6 +35,5 @@ lib_LTLIBRARIES = libngtcp2_crypto_mbedtls.la
 
 libngtcp2_crypto_mbedtls_la_SOURCES = mbedtls.c ../shared.c ../shared.h
 libngtcp2_crypto_mbedtls_la_LDFLAGS = -no-undefined \
-	-version-info $(CRYPTO_MBEDTLS_LT_CURRENT):$(CRYPTO_MBEDTLS_LT_REVISION):$(CRYPTO_MBEDTLS_LT_AGE) \
-  @OPENSSL_LIBS@
+	-version-info $(CRYPTO_MBEDTLS_LT_CURRENT):$(CRYPTO_MBEDTLS_LT_REVISION):$(CRYPTO_MBEDTLS_LT_AGE)
 libngtcp2_crypto_mbedtls_la_LIBADD = $(top_builddir)/lib/libngtcp2.la
