@@ -8,7 +8,7 @@
 3. Build ngtcp2
    Follow README.rst to build ngtcp2 with OpenSSL (OpenSSL needed for test server) except:
    In the last step, make some modifications to `./configure`:
-   ./configure CPPFLAGS="-I/usr/local/include -I$PWD/../mbedtls/include" PKG_CONFIG_PATH=$PWD/../openssl/build/lib/pkgconfig:$PWD/../nghttp3/build/lib/pkgconfig LDFLAGS="-Wl,-rpath,$PWD/../openssl/build/lib,-L/usr/local/lib,-L$PWD/../mbedtls/build/library -lmbedtls -lmbedcrypto -lmbedx509"
+   ./configure --with-mbedtls CPPFLAGS="-I/usr/local/include -I$PWD/../mbedtls/include" PKG_CONFIG_PATH=$PWD/../openssl/build/lib/pkgconfig:$PWD/../nghttp3/build/lib/pkgconfig LDFLAGS="-Wl,-rpath,$PWD/../openssl/build/lib,-L/usr/local/lib,-L$PWD/../mbedtls/build/library -lmbedtls -lmbedcrypto -lmbedx509"
    make -j check
 4. Test mbedtlsclient with FB prod server
    ./examples/mbedtlsclient www.facebook.com 443 https://www.facebook.com/status.php
