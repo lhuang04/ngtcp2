@@ -1,0 +1,18 @@
+1. Download repo
+   mbedtls: mbedtsl_ngtcp2_quic_integration branch
+            https://github.com/lhuang04/mbedtls/tree/mbedtls_ngtcp2_quic_integration
+   ngtcp2: main branch
+           https://github.com/JunqiWang/ngtcp2
+2. Build mbedtls
+   cd mbedtls && mkdir build && cd build && cmake -DMBEDTLS_FATAL_WARNINGS=OFF -DENABLE_TESTING=OFF .. && make -j
+3. Build ngtcp2
+   Follow README.rst to build ngtcp2 with OpenSSL (OpenSSL needed for test server) except:
+   In the last step, make some modifications to `./configure`:
+   ./configure CPPFLAGS="-I/usr/local/include -I$PWD/../mbedtls/include" PKG_CONFIG_PATH=$PWD/../openssl/build/lib/pkgconfig:$PWD/../nghttp3/build/lib/pkgconfig LDFLAGS="-Wl,-rpath,$PWD/../openssl/build/lib,-L/usr/local/lib,-L$PWD/../mbedtls/build/library -lmbedtls -lmbedcrypto -lmbedx509"
+   make -j check
+4. Test mbedtlsclient with FB prod server
+   ./examples/mbedtlsclient www.facebook.com 443 https://www.facebook.com/status.php
+   Should receive "I-AM-ALIVE"
+5. Test mbedtlsclient with OpenSSL server
+   ./examples/server [OPTIONS] <ADDR> <PORT> <PRIVATE_KEY_FILE> <CERTIFICATE_FILE>
+   ./examples/client [OPTIONS] <HOST> <PORT> [<URI>...]
