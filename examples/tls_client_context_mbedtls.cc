@@ -63,7 +63,7 @@ void _HandshakeDebugPrint(
   fprintf(stderr, "mbedDBG[%d]: %s:%d %s", level, file, line, msg);
 }
 
-int kSSLPresetQUICCiphersuites[] = {TLS_AES_128_GCM_SHA256, 0};
+int kSSLPresetQUICCiphersuites[] = {MBEDTLS_TLS1_3_AES_128_GCM_SHA256, 0};
 
 mbedtls_ecp_group_id kSSLPresetQUICCurves[] = {
     MBEDTLS_ECP_DP_SECP256R1,
