@@ -89,8 +89,6 @@ mbedtls_ssl_config *create_ssl_ctx(const char *private_key_file, const char *cer
       MBEDTLS_SSL_MINOR_VERSION_4);
   mbedtls_ssl_conf_ciphersuites(
       &_mbedTlsConfig, kSSLPresetQUICCiphersuites);
-  mbedtls_ssl_conf_key_share_curves(
-      &_mbedTlsConfig, kSSLPresetQUICCurves);
   mbedtls_ssl_conf_curves(&_mbedTlsConfig, kSSLPresetQUICCurves);
   // Initialize counter mode DRBG (NOTE: do we need DRBG for GCM mode)?
   mbedtls_ctr_drbg_init(&_mbedTlsCtrDrbg);
