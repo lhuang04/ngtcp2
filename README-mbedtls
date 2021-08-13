@@ -1,8 +1,8 @@
 1. Download repo
    mbedtls: mbedtsl_ngtcp2_quic_integration branch
             https://github.com/lhuang04/mbedtls/tree/mbedtls_ngtcp2_quic_integration
-   ngtcp2: main branch
-           https://github.com/JunqiWang/ngtcp2
+   ngtcp2: mbedtls branch
+           https://github.com/JunqiWang/ngtcp2/tree/mbedtls
 2. Build mbedtls
    cd mbedtls && mkdir build && cd build && cmake -DMBEDTLS_FATAL_WARNINGS=OFF -DENABLE_TESTING=OFF .. && make -j
 3. Build ngtcp2
