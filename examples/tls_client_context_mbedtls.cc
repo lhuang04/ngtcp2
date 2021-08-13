@@ -63,7 +63,7 @@ void _HandshakeDebugPrint(
   fprintf(stderr, "mbedDBG[%d]: %s:%d %s", level, file, line, msg);
 }
 
-int kSSLPresetQUICCiphersuites[] = {TLS_AES_128_GCM_SHA256, 0};
+int kSSLPresetQUICCiphersuites[] = {MBEDTLS_TLS1_3_AES_128_GCM_SHA256, 0};
 
 mbedtls_ecp_group_id kSSLPresetQUICCurves[] = {
     MBEDTLS_ECP_DP_SECP256R1,
@@ -89,8 +89,6 @@ mbedtls_ssl_config *create_ssl_ctx(const char *private_key_file, const char *cer
       MBEDTLS_SSL_MINOR_VERSION_4);
   mbedtls_ssl_conf_ciphersuites(
       &_mbedTlsConfig, kSSLPresetQUICCiphersuites);
-  mbedtls_ssl_conf_key_share_curves(
-      &_mbedTlsConfig, kSSLPresetQUICCurves);
   mbedtls_ssl_conf_curves(&_mbedTlsConfig, kSSLPresetQUICCurves);
   // Initialize counter mode DRBG (NOTE: do we need DRBG for GCM mode)?
   mbedtls_ctr_drbg_init(&_mbedTlsCtrDrbg);

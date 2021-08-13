@@ -26,6 +26,8 @@
 #  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
 #include <assert.h>
 #include <string.h>
 
